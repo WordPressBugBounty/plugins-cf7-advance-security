@@ -1,11 +1,11 @@
 === Contact Form 7 Spam Killer===
 Contributors: wpexpertsin, india-web-developer
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=ZEMSYQUZRUK6A
-Tags: contact form 7,contact form 7 captcha, captcha,  Stop Spam, Prevent Spam, cf7, contact form 7, contact form 7 spam, contact form spam killer, contact form seven, wpcf7
+Tags: cf7 math captcha, contact form 7, contact form 7 captcha, form 7 spam stoper, form security
 
 Requires at least: 5.6
-Tested up to: 6.3.1
-Stable tag: 1.6
+Tested up to: 6.7.2
+Stable tag: 1.7
 
 "Contact Form 7 Spam Killer" is a advance spam blocker that will help to prevent unwanted spam for your Contact Form 7 plugin.
 
@@ -14,7 +14,7 @@ Stable tag: 1.6
 
 "Contact Form 7 Spam Killer" plugin gives double layer security to your contact form 7. This plugin is very effective to stop machine and human spam for Contact Form 7 plugin. This plugin helps you to prevent unwanted spam from all forms of the website that has been created by Contact Form 7 plugin. As Form 7 is most popular contact form plugin and many users faced the spam issue with this form so we have created this plugin to give a permanent solution from spam emails issue.
 
-= Plugin tested with latest version 5.8 of Form 7 =
+= Plugin tested with latest version 6.0.4 of Form 7 =
 
 Do You Have Any Query? **[Submit here](https://www.wp-experts.in/contact-us/?utm_source=wordpress.org&utm_medium=free-plugin&utm_campaign=form7spam-killer)**
 
@@ -58,6 +58,10 @@ You can add captcha by [cf7ascaptcha] shortcode
 
 == Changelog ==
 
+= 1.7= 
+ * Tested with latest wordpress version 6.7.2
+ * Tested with Contact Form 7 Version 6.0.4
+ 
 = 1.2= 
  * Tested with latest wordpress version 5.7.1
  * Move the settings menu under Contact

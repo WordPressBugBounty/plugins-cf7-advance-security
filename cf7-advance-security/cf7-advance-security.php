@@ -4,7 +4,7 @@ Plugin Name: Contact Form 7 Spam Killer
 Description: Prevent unwanted spam mail from your inbox. A permanent solution for from 7 spam emails issue.
 Author: WP-EXPERTS.IN Team
 Author URI: https://www.wp-experts.in
-Version: 1.6
+Version: 1.7
 License:GPL2
 Conatct Form 7 Spam Killer is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
