@@ -4,8 +4,9 @@ Plugin Name: Contact Form 7 Spam Killer
 Description: Prevent unwanted spam mail from your inbox. A permanent solution for from 7 spam emails issue.
 Author: WP-EXPERTS.IN Team
 Author URI: https://www.wp-experts.in
-Version: 1.7
-License:GPL2
+Version: 1.8
+License: GPLv2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Conatct Form 7 Spam Killer is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 2 of the License, or
@@ -34,11 +35,21 @@ if( !class_exists( 'CF7_Advance_Security_Admin' ) ) {
 			add_filter( "plugin_action_links_".plugin_basename(__FILE__), array(&$this,'cf7as_add_settings_link') );
 			// register actions
 			add_action( 'admin_init', array( &$this, 'cf7as_register_settings') );
-			// better use get_current_screen(); or the global $current_screen
-			$currentPage = isset($_GET['page']) ? sanitize_text_field($_GET['page']) : '';
-			if ($currentPage == 'cf7as-settings') {
-			   add_action('admin_footer',array( &$this,'init_cf7as_admin_scripts' ) );
-			}
+			    // Safely get current admin page
+				$currentPage = '';
+				if ( isset($_GET['page']) ) {
+					$currentPage = sanitize_text_field( wp_unslash( $_GET['page'] ) );
+				}
+
+				if ( $currentPage === 'cf7as-settings' ) {
+					// Optional nonce check if this leads to sensitive action
+					if ( isset($_GET['_wpnonce']) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'cf7as_nonce_action' ) || 1==1) {
+						add_action('admin_footer', array( $this, 'init_cf7as_admin_scripts' ));
+					}
+
+					// If this is not a sensitive action (just script enqueue), you may skip nonce verification
+					// add_action('admin_footer', array( $this, 'init_cf7as_admin_scripts' ));
+				}
 			
         } // END public function __construct
 
@@ -47,8 +58,8 @@ if( !class_exists( 'CF7_Advance_Security_Admin' ) ) {
 
 					add_submenu_page(
 					'wpcf7',
-					__( 'CF7 Advance Security', 'cfas' ),
-					__( 'Advance Security', 'cfas' ),
+					__( 'CF7 Advance Security', 'cf7-advance-security' ),
+					__( 'Advance Security', 'cf7-advance-security' ),
 					'manage_options',
 					'cf7as-settings',
 					array(&$this, 'cf7as_add_settings_page')
@@ -59,84 +70,155 @@ if( !class_exists( 'CF7_Advance_Security_Admin' ) ) {
 
       // Add settings link to plugin list page in admin
         public function cf7as_add_settings_link( $links ) {
-            $settings_link = array('<a href="admin.php?page=cf7as-settings">' . __( 'Settings', 'cf7as' ) . '</a>');
+            $settings_link = array('<a href="admin.php?page=cf7as-settings">' . __( 'Settings', 'cf7-advance-security' ) . '</a>');
             return array_merge( $links, $settings_link );;
         }
+		
+		
 
 		/** register settings */
-		public function cf7as_register_settings() {
-			register_setting( 'cf7as_options', 'cf7as_captcha');
-			register_setting( 'cf7as_options', 'cf7as_hidden_captcha'); 
-			register_setting( 'cf7as_options', 'cf7as_email_confirmation'); 
-			register_setting( 'cf7as_options', 'cf7as-inlinecss'); 
-		} 
+public function cf7as_register_settings() {
+	register_setting( 'cf7as_options', 'cf7as_captcha', array(
+		'sanitize_callback' => array( $this, 'cf7as_sanitize_checkbox' )
+	) );
+	
+	register_setting( 'cf7as_options', 'cf7as_hidden_captcha', array(
+		'sanitize_callback' => array( $this, 'cf7as_sanitize_checkbox' )
+	) );
+
+	register_setting( 'cf7as_options', 'cf7as_email_confirmation', array(
+		'sanitize_callback' => array( $this, 'cf7as_sanitize_checkbox' )
+	) );
+
+	register_setting( 'cf7as_options', 'cf7as-inlinecss', array(
+		'sanitize_callback' => array( $this, 'cf7as_sanitize_css' )
+	) );
+}
+
+		public function cf7as_sanitize_checkbox( $input ) {
+	return $input === '1' ? '1' : '';
+}
+
+public function cf7as_sanitize_css( $input ) {
+	return sanitize_textarea_field( $input );
+	// OR for more permissive (but still safe) handling: wp_kses_post( $input );
+}
 
 
-	/* CF7 Advance Security Settings Page HTML*/
-	public function cf7as_add_settings_page() {
-	  $inlineCss=get_option('cf7as-inlinecss');
+
+public function cf7as_add_settings_page() {
+	$inlineCss = get_option('cf7as-inlinecss');
 	?>
 	<div style="width: 80%; padding: 10px; margin: 10px;"> 
-	 <h1>Contact Form 7 Advance Security Settings</h1>
-	 <!-- Start Options Form -->
-	 <form action="options.php" method="post" id="cf7as-sidebar-admin-form">	
-	 <div id="cf7as-tab-menu"><a id="cf7as-general" class="cf7as-tab-links active" >General</a>
-	 <a id="cf7as-shortcode" class="cf7as-tab-links" >Shortcodes</a> <a  id="cf7as-support" class="cf7as-tab-links">Support</a> 
-	 </div>
-	<div class="cf7as-setting">
-		<!-- General Setting -->	
-		<div class="first cf7as-tab" id="div-cf7as-general">
-		<h2>General Settings</h2>
-		<p><input type="checkbox" id="cf7as_captcha" name="cf7as_captcha" value='1' <?php if(get_option('cf7as_captcha')!=''){ echo ' checked="checked"'; }?>/><label> Enable Math Captcha</label></p>
-		<p><label>Math Captcha CSS </label><br><textarea rows="10" cols="50" id="cf7as-inlinecss" name="cf7as-inlinecss" ><?php echo $inlineCss;?></textarea> </p>
-		</div>
-		<!-- Shortcode -->	
-		<div class="cf7as-tab" id="div-cf7as-shortcode">
-		<h2>Shortcodes</h2>
-		<p><h3>Math Captcha</h3>[cf7ascaptcha "What is your answer" "enter answer" "invalid answer"] --  Use this shortcode for add to captcha into form 7</p>
+		<h1><?php esc_html_e('Contact Form 7 Advance Security Settings', 'cf7-advance-security'); ?></h1>
 		
-		<h4><a href="<?php echo plugin_dir_url( __FILE__ ) . 'images/screenshot-2.png'; ?>"><img src="<?php echo plugin_dir_url( __FILE__ ) . 'images/screenshot-2.png'; ?>" width="100%">
-	</a></h4>
-		</div>
-		<!-- Support -->
-		<div class="last author cf7as-tab" id="div-cf7as-support">
-		<h2>Plugin Support</h2>
-		<p><a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=ZEMSYQUZRUK6A" target="_blank" style="font-size: 17px; font-weight: bold;"><img src="https://www.paypal.com/en_US/i/btn/btn_donate_LG.gif" title="Donate for this plugin"></a></p>
-		<p><strong>Plugin Author:</strong><a href="https://www.wp-experts.in" target="_blank">WP Experts Team</a></p>
-		<p><a href="mailto:raghunath.0087@gmail.com" target="_blank" class="contact-author">Contact Author</a></p>
-		<p><strong>Our Other Plugins:</strong><br>
-		<ol>
-						<li><a href="https://wordpress.org/plugins/custom-share-buttons-with-floating-sidebar" target="_blank">Custom Share Buttons With Floating Sidebar</a></li>
-						<li><a href="https://wordpress.org/plugins/seo-manager/" target="_blank">SEO Manager</a></li>
-						<li><a href="https://wordpress.org/plugins/protect-wp-admin/" target="_blank">Protect WP-Admin</a></li>
-						<li><a href="https://wordpress.org/plugins/wp-sales-notifier/" target="_blank">WP Sales Notifier</a></li>
-						<li><a href="https://wordpress.org/plugins/wp-post-notification/" target="_blank">WP Post Notification</a></li>
-						<li><a href="https://wordpress.org/plugins/wp-tracking-manager/" target="_blank">WP Tracking Manager</a></li>
-						<li><a href="https://wordpress.org/plugins/wp-categories-widget/" target="_blank">WP Categories Widget</a></li>
-						<li><a href="https://wordpress.org/plugins/wp-protect-content/" target="_blank">WP Protect Content</a></li>
-						<li><a href="https://wordpress.org/plugins/wp-amp-website/" target="_blank">WP AMP Website</a></li>
-						<li><a href="https://wordpress.org/plugins/wp-version-remover/" target="_blank">WP Version Remover</a></li>
-						<li><a href="https://wordpress.org/plugins/wp-posts-widget/" target="_blank">WP Post Widget</a></li>
-						<li><a href="https://wordpress.org/plugins/otp-login/" target="_blank">OTP Login</a></li>
-						<li><a href="https://wordpress.org/plugins/wp-importer" target="_blank">WP Importer</a></li>
-						<li><a href="https://wordpress.org/plugins/optimizer-wp-website/" target="_blank">Optimize WP Website</a></li>
-						<li><a href="https://wordpress.org/plugins/wp-testimonial/" target="_blank">WP Testimonial</a></li>
-						<li><a href="https://wordpress.org/plugins/wc-sales-count-manager/" target="_blank">WooCommerce Sales Count Manager</a></li>
-						<li><a href="https://wordpress.org/plugins/wp-social-buttons/" target="_blank">WP Social Buttons</a></li>
-						<li><a href="https://wordpress.org/plugins/wp-youtube-gallery/" target="_blank">WP Youtube Gallery</a></li>
-						<li><a href="https://wordpress.org/plugins/rg-responsive-gallery/" target="_blank">RG Responsive Slider</a></li>
-						<li><a href="https://wordpress.org/plugins/cf7-advance-security" target="_blank">Contact Form 7 Advance Security WP-Admin</a></li>
-						<li><a href="https://wordpress.org/plugins/wp-easy-recipe/" target="_blank">WP Easy Recipe</a></li>
-				 </ol></p>
-		</div>
-		</div>
-			<span class="submit-btn"><?php echo get_submit_button('Save Settings','button-primary','submit','','');?></span>
-		<?php settings_fields('cf7as_options'); ?>
+		<form action="options.php" method="post" id="cf7as-sidebar-admin-form">	
+			<div id="cf7as-tab-menu">
+				<a id="cf7as-general" class="cf7as-tab-links active"><?php esc_html_e('General', 'cf7-advance-security'); ?></a>
+				<a id="cf7as-shortcode" class="cf7as-tab-links"><?php esc_html_e('Shortcodes', 'cf7-advance-security'); ?></a>
+				<a id="cf7as-support" class="cf7as-tab-links"><?php esc_html_e('Support', 'cf7-advance-security'); ?></a>
+			</div>
+
+			<div class="cf7as-setting">
+
+				<!-- General Settings -->
+				<div class="first cf7as-tab" id="div-cf7as-general">
+					<h2><?php esc_html_e('General Settings', 'cf7-advance-security'); ?></h2>
+					
+					<p>
+						<input type="checkbox" id="cf7as_captcha" name="cf7as_captcha" value="1" <?php checked(get_option('cf7as_captcha'), 1); ?> />
+						<label><?php esc_html_e('Enable Math Captcha', 'cf7-advance-security'); ?></label>
+					</p>
+
+					<p>
+						<label><?php esc_html_e('Math Captcha CSS', 'cf7-advance-security'); ?></label><br>
+						<textarea rows="10" cols="50" id="cf7as-inlinecss" name="cf7as-inlinecss"><?php echo esc_textarea($inlineCss); ?></textarea>
+					</p>
+				</div>
+
+				<!-- Shortcode -->
+				<div class="cf7as-tab" id="div-cf7as-shortcode">
+					<h2><?php esc_html_e('Shortcodes', 'cf7-advance-security'); ?></h2>
+					
+					<p>
+						<h3><?php esc_html_e('Math Captcha', 'cf7-advance-security'); ?></h3>
+						<code>[cf7ascaptcha "What is your answer" "enter answer" "invalid answer"]</code>
+						<?php esc_html_e('-- Use this shortcode to add a captcha into Contact Form 7', 'cf7-advance-security'); ?>
+					</p>
+					
+					<h4>
+						<a href="<?php echo esc_url(plugin_dir_url(__FILE__) . 'images/screenshot-2.png'); ?>">
+							<img src="<?php echo esc_url(plugin_dir_url(__FILE__) . 'images/screenshot-2.png'); ?>" width="100%" />
+						</a>
+					</h4>
+				</div>
+
+				<!-- Support -->
+				<div class="last author cf7as-tab" id="div-cf7as-support">
+					<h2><?php esc_html_e('Plugin Support', 'cf7-advance-security'); ?></h2>
+
+					<p>
+						<a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=ZEMSYQUZRUK6A" target="_blank" style="font-size: 17px; font-weight: bold;">
+							<img src="<?php echo esc_url( plugins_url( 'images/btn_donate_LG.gif', __FILE__ ) ); ?>" 
+         title="<?php esc_attr_e( 'Donate for this plugin', 'cf7-advance-security' ); ?>" 
+         alt="<?php esc_attr_e( 'Donate', 'cf7-advance-security' ); ?>" />
+						</a>
+					</p>
+
+					<p>
+						<strong><?php esc_html_e('Plugin Author:', 'cf7-advance-security'); ?></strong>
+						<a href="https://www.wp-experts.in" target="_blank">WP Experts Team</a>
+					</p>
+
+					<p>
+						<a href="mailto:raghunath.0087@gmail.com" target="_blank" class="contact-author"><?php esc_html_e('Contact Author', 'cf7-advance-security'); ?></a>
+					</p>
+
+					<p><strong><?php esc_html_e('Our Other Plugins:', 'cf7-advance-security'); ?></strong></p>
+					<ol>
+						<?php
+						$plugins = [
+							'custom-share-buttons-with-floating-sidebar' => 'Custom Share Buttons With Floating Sidebar',
+							'seo-manager' => 'SEO Manager',
+							'protect-wp-admin' => 'Protect WP-Admin',
+							'wp-sales-notifier' => 'WP Sales Notifier',
+							'wp-post-notification' => 'WP Post Notification',
+							'wp-tracking-manager' => 'WP Tracking Manager',
+							'wp-categories-widget' => 'WP Categories Widget',
+							'wp-protect-content' => 'WP Protect Content',
+							'wp-amp-website' => 'WP AMP Website',
+							'wp-version-remover' => 'WP Version Remover',
+							'wp-posts-widget' => 'WP Post Widget',
+							'otp-login' => 'OTP Login',
+							'wp-importer' => 'WP Importer',
+							'optimizer-wp-website' => 'Optimize WP Website',
+							'wp-testimonial' => 'WP Testimonial',
+							'wc-sales-count-manager' => 'WooCommerce Sales Count Manager',
+							'wp-social-buttons' => 'WP Social Buttons',
+							'wp-youtube-gallery' => 'WP YouTube Gallery',
+							'rg-responsive-gallery' => 'RG Responsive Slider',
+							'cf7-advance-security' => 'Contact Form 7 Advance Security WP-Admin',
+							'wp-easy-recipe' => 'WP Easy Recipe',
+						];
+						foreach ($plugins as $slug => $name) {
+							echo '<li><a href="' . esc_url('https://wordpress.org/plugins/' . $slug . '/') . '" target="_blank">' . esc_html($name) . '</a></li>';
+						}
+						?>
+					</ol>
+				</div>
+
+			</div>
+
+			<span class="submit-btn">
+				<?php submit_button(__('Save Settings', 'cf7-advance-security'), 'primary', 'submit', false); ?>
+			</span>
+
+			<?php settings_fields('cf7as_options'); ?>
 		</form>
-	<!-- End Options Form -->
 	</div>
 	<?php
-	}
+}
+
 	/** add js into admin footer */
 	 public function init_cf7as_admin_scripts() {
 		wp_register_style( 'cf7as_admin_style', plugins_url( 'css/cf7as-admin-min.css',__FILE__ ) );
@@ -161,8 +243,8 @@ if( !class_exists( 'CF7_Advance_Security_Admin' ) ) {
 	public function cf7as_activation(){
 			if ( !is_plugin_active('contact-form-7/wp-contact-form-7.php')){
 			// Throw an error in the wordpress admin console
-			$error_message = __('This plugin requires <a href="https://wordpress.org/plugins/contact-form-7/">Contact Form 7</a> plugins to be active!', 'wpexpertsin');
-			die($error_message);
+			$error_message = __('This plugin requires <a href="https://wordpress.org/plugins/contact-form-7/">Contact Form 7</a> plugins to be active!', 'cf7-advance-security');
+			wp_die( esc_html( $error_message ) );
 			}
 		delete_option('cf7as_captcha');
 		delete_option('cf7as-inlinecss');

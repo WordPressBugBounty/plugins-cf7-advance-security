@@ -26,9 +26,11 @@ if( !empty($isEnable) ) {
 				
 				$tag->name= 'cf7as-captchcode';
 				$finalCechking = '';
-				$cptha1=sanitize_text_field($_POST['cf7as_hdn_cpthaval1']);
-				$cptha2=sanitize_text_field($_POST['cf7as_hdn_cpthaval2']);
-				$cptha3=sanitize_text_field($_POST['cf7as_hdn_cpthaaction']);
+               $cptha1 = isset($_POST['cf7as_hdn_cpthaval1']) ? sanitize_text_field(wp_unslash($_POST['cf7as_hdn_cpthaval1'])) : '';
+$cptha2 = isset($_POST['cf7as_hdn_cpthaval2']) ? sanitize_text_field(wp_unslash($_POST['cf7as_hdn_cpthaval2'])) : '';
+$cptha3 = isset($_POST['cf7as_hdn_cpthaaction']) ? sanitize_text_field(wp_unslash($_POST['cf7as_hdn_cpthaaction'])) : '';
+$cptcha_value = isset($_POST['cf7as-captchcode']) ? intval($_POST['cf7as-captchcode']) : 0;
+$cptcha_zplusvalue = isset($_POST['cf7as-zplus']) ? sanitize_text_field(wp_unslash($_POST['cf7as-zplus'])) : '';
 				
 						
 		        $required = isset( $tag->values[2] ) ? $tag->values[2] : 'Invalid Answer!';
@@ -40,8 +42,6 @@ if( !empty($isEnable) ) {
 				}else {
 					$finalCechking=( $cptha1-$cptha2 );
 					}
-					
-				$cptcha_value = isset( $_POST['cf7as-captchcode'] )	? trim( wp_unslash( strtr( (string) $_POST['cf7as-captchcode'], "\n", " " ) ) )	: '';
 				
 				if( $cptcha_value=='' ) {
 					$result->invalidate($tag,$required);
@@ -52,9 +52,8 @@ if( !empty($isEnable) ) {
 					$result->invalidate($tag,$required);
 				 }
 				 //check double security
-				 $cptcha_value = isset( $_POST['cf7as-zplus'] )	? sanitize_text_field($_POST['cf7as-zplus'])	: '';
 				 
-				 if( $cptcha_value!='' ) {
+				 if( $cptcha_zplusvalue!='' ) {
 					$result->invalidate($tag,'You are not human!');
 				  }
 			}
@@ -99,10 +98,10 @@ if( !function_exists('cf7as_captcha_shortcode_handler') ) :
 		$operationAry=array('+','x','-');
 		$random_action=array_rand($operationAry,2);
 		$random_actionVal=$operationAry[$random_action[0]];
-		$actnVal1=rand(1,9);
-		$actnVal2=rand(1,9);
+        $actnVal1 = wp_rand(1, 9);
+        $actnVal2 = wp_rand(1, 9);
 		$cf7as_captcha='<p class="cf7ascaptcha"><input name="cf7as_hdn_cpthaval1" id="cf7as_hdn_cpthaval1" type="hidden" value="'.$actnVal1.'" /><input name="cf7as_hdn_cpthaval2" id="cf7as_hdn_cpthaval2" type="hidden" value="'.$actnVal2.'" /><input name="cf7as_hdn_cpthaaction" id="cf7as_hdn_cpthaaction" type="hidden" value="'.$random_actionVal.'" />';
-		$cf7as_captcha.=$title.' <span class="cf7as-firstAct">'.$actnVal2.'</span> '.$random_actionVal.'<span class="cf7as-firstAct"> '.$actnVal1.'</span> <br><span class="wpcf7-form-control-wrap cf7as-captchcode" data-name="cf7as-captchcode"> <input type="text" aria-invalid="false" aria-required="true" class="wpcf7-form-control wpcf7-text wpcf7-validates-as-required" size="5" value="" name="cf7as-captchcode" placeholder="'.$placeholder.'" style="width:200px;margin-bottom:10px;" oninput="this.value = this.value.replace(/[^0-9.]/g, \'\').replace(/(\..*)\./g, \'$1\');"></span><input type="hidden" name="cf7as-zplus" value=""></p>';
+		$cf7as_captcha.=$title.' <span class="cf7as-firstAct">'.$actnVal2.'</span> '.$random_actionVal.'<span class="cf7as-firstAct"> '.$actnVal1.'</span> <br><span class="wpcf7-form-control-wrap cf7as-captchcode" data-name="cf7as-captchcode"> <input type="text" aria-invalid="false" aria-required="true" class="wpcf7-form-control wpcf7-text wpcf7-validates-as-required" size="5" value="" name="cf7as-captchcode" placeholder="'.$placeholder.'" style="width:200px;margin-bottom:10px;" oninput="this.value = this.value.replace(/[^0-9.]/g, \'\').replace(/(\..*)\./g, \'$1\');"></span><input type="hidden" name="cf7as-zplus" value=""></p>'.wp_nonce_field('cf7as_captcha_nonce_action', 'cf7as_captcha_nonce', true, false);
 		
 
 		return $cf7as_captcha;
@@ -113,27 +112,32 @@ endif;
 add_action( 'wpcf7_admin_init', 'cf7as_add_tag_generator_button', 55, 0 );
 
 function cf7as_add_tag_generator_button() {
-	$tag_generator = WPCF7_TagGenerator::get_instance();
-	$tag_generator->add( 'cf7ascaptcha', __( 'cf7ascaptcha', 'contact-form-7' ),
-		'cf7as_tag_generator_cf7ascaptcha', array( 'nameless' => 1 ) );
+	if ( class_exists( 'WPCF7_TagGenerator' ) ) {
+		$tag_generator = WPCF7_TagGenerator::get_instance();
+
+		$tag_generator->add( 'cf7ascaptcha', __( 'cf7ascaptcha', 'cf7-advance-security' ), array(
+			'features' => array( 'nameless' => true ),
+			'callback' => 'cf7as_tag_generator_cf7ascaptcha',
+		) );
+	}
 }
 
 function cf7as_tag_generator_cf7ascaptcha( $contact_form, $args = '' ) {
 	$args = wp_parse_args( $args, array() );
 
-	$description = __( "Generate a form advance secuirty captcha", 'contact-form-7' );
+	$description = __( "Generate a form advance secuirty captcha", 'cf7-advance-security' );
 	
 	$desc_link = 'https://www.wp-experts.in';
 
 ?>
 <div class="control-box">
 <fieldset>
-<legend><?php echo sprintf( esc_html( $description ), $desc_link ); ?></legend>
+<legend><?php echo sprintf( esc_html( $description ), esc_html( $desc_link ) ); ?></legend>
 
 <table class="form-table">
 <tbody>
 	<tr>
-	<th scope="row"><label for="<?php echo esc_attr( $args['content'] . '-values' ); ?>"><?php echo esc_html( __( 'Title', 'contact-form-7' ) ); ?></label></th>
+	<th scope="row"><label for="<?php echo esc_attr( $args['content'] . '-values' ); ?>"><?php echo esc_html( __( 'Title', 'cf7-advance-security' ) ); ?></label></th>
 	<td><input type="text" name="values" class="oneline" id="<?php echo esc_attr( $args['content'] . '-values' ); ?>" /><label></td>
 	</tr>
 </tbody>
@@ -147,7 +151,7 @@ function cf7as_tag_generator_cf7ascaptcha( $contact_form, $args = '' ) {
 <div class="insert-box">
 	<input type="text" name="cf7ascaptcha" class="tag code" readonly="readonly" onfocus="this.select()" />
 	<div class="submitbox">
-	<input type="button" class="button button-primary insert-tag" value="<?php echo esc_attr( __( 'Insert Captcha', 'contact-form-7' ) ); ?>" />
+	<input type="button" class="button button-primary insert-tag" value="<?php echo esc_attr( __( 'Insert Captcha', 'cf7-advance-security' ) ); ?>" />
 	</div>
 </div>
 <?php
